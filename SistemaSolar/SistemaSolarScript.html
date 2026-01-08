@@ -41,6 +41,34 @@
             background-color: #2E7D32;
             box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
         }
+
+        /* Estilos para las etiquetas de los planetas */
+        #labels {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            /* No interfiere con el ratón */
+            overflow: hidden;
+            z-index: 10;
+        }
+
+        .planet-label {
+            position: absolute;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            text-shadow: 2px 2px 4px black;
+            transform: translate(-50%, -100%);
+            white-space: nowrap;
+        }
+
+        #container {
+            position: relative;
+            display: inline-block;
+        }
     </style>
 
 
@@ -161,36 +189,93 @@
         return mix(baseDate, dark, craters);
     }
     
-    uniform int uTextureType; // 0=Solid, 1=Earth, 2=Moon
-    uniform vec3 uBlockerPos;      // Position of blocking sphere (View Space)
-    uniform float uBlockerRadius;  // Radius of blocking sphere
+    vec3 getMercuryColor(vec3 pos) {
+        return getMoonColor(pos) * 1.2; // Similar a la luna pero más brillante/diferente tono
+    }
+
+    vec3 getVenusColor(vec3 pos) {
+        float n = simpleNoise(pos * 3.0);
+        vec3 c1 = vec3(1.0, 0.9, 0.6); // Amarillo pálido
+        vec3 c2 = vec3(0.9, 0.6, 0.2); // Naranja
+        return mix(c1, c2, n);
+    }
+
+    vec3 getMarsColor(vec3 pos) {
+        float n = simpleNoise(pos * 4.0);
+        vec3 c1 = vec3(0.8, 0.3, 0.1); // Rojo óxido
+        vec3 c2 = vec3(0.6, 0.2, 0.1); // Rojo oscuro
+        return mix(c1, c2, smoothstep(0.3, 0.7, n));
+    }
+
+    vec3 getJupiterColor(vec3 pos) {
+        // Bandas horizontales basadas en Y
+        float bands = sin(pos.y * 10.0 + simpleNoise(pos*3.0)*2.0); 
+        vec3 c1 = vec3(0.9, 0.8, 0.7); // Crema
+        vec3 c2 = vec3(0.8, 0.5, 0.4); // Marrón rojizo
+        return mix(c1, c2, bands * 0.5 + 0.5);
+    }
+    
+    vec3 getSaturnColor(vec3 pos) {
+        float bands = sin(pos.y * 8.0);
+        vec3 c1 = vec3(0.9, 0.85, 0.6); // Dorado pálido
+        vec3 c2 = vec3(0.8, 0.7, 0.5); // Beige
+        return mix(c1, c2, bands * 0.5 + 0.5);
+    }
+
+    vec3 getUranusColor(vec3 pos) {
+        return vec3(0.6, 0.8, 0.9) * (0.9 + 0.1 * simpleNoise(pos * 5.0)); // Featureless Cyan
+    }
+
+    vec3 getNeptuneColor(vec3 pos) {
+        return vec3(0.2, 0.3, 0.8) * (0.8 + 0.2 * simpleNoise(pos * 5.0)); // Deep Blue
+    }
+
+    vec3 getRingColor(vec3 pos) {
+        // Franjas de polvo/hielo basadas en la distancia radial
+        float r = length(pos.xz);
+        float bands = sin(r * 80.0) * 0.5 + 0.5;
+        vec3 c1 = vec3(0.7, 0.6, 0.4);
+        vec3 c2 = vec3(0.4, 0.3, 0.2);
+        return mix(c1, c2, bands);
+    }
+
+    vec3 getStarsColor(vec3 pos) {
+        float n = hash(pos.x * 123.4 + pos.y * 567.8 + pos.z * 910.1);
+        if (n > 0.9997) return vec3(1.0, 1.0, 1.0);
+        return vec3(0.0, 0.0, 0.0);
+    }
+
+    uniform int uTextureType; 
+    // 0=Solid, 1=Earth, 2=Moon, 3=Mercury, 4=Venus, 5=Mars, 6=Jupiter, 7=Saturn, 8=Uranus, 9=Neptune, 10=Stars, 11=Rings
+
+    uniform vec3 uBlockerPos;
+    uniform float uBlockerRadius;
 
     // 0.0 = Sombra total, 1.0 = Luz total
     float calculateShadow(vec3 fragPos, vec3 lightPos) {
-        if (uBlockerRadius <= 0.0) return 1.0; // No blocker
+        if (uBlockerRadius <= 0.0) return 1.0; 
 
-        vec3 L_vec = uBlockerPos - lightPos; // Vector de Luz a Centro Bloqueador
-        vec3 D = normalize(fragPos - lightPos); // Dirección del Rayo de Luz
+        vec3 L_vec = uBlockerPos - lightPos;
+        vec3 D = normalize(fragPos - lightPos);
         
         float tca = dot(L_vec, D);
-        if (tca < 0.0) return 1.0; // Bloqueador detrás de la luz
+        if (tca < 0.0) return 1.0; 
 
         float d2 = dot(L_vec, L_vec) - tca * tca;
         float r2 = uBlockerRadius * uBlockerRadius;
         
-        if (d2 > r2) return 1.0; // Rayo pasa fuera de la esfera bloqueadora
+        if (d2 > r2) return 1.0; 
 
         float thc = sqrt(r2 - d2);
-        float t0 = tca - thc; // Primera intersección
+        float t0 = tca - thc; 
         
         float fragDist = length(fragPos - lightPos);
         
-        // Si la intersección es válida (positiva) y está ANTES que el fragmento (con margen)
         if (t0 > 0.1 && t0 < (fragDist - 0.1)) {
-            return 0.0; // En Sombra
+            return 0.0; 
         }
         
-        return 1.0; // Iluminado
+        return 1.0; 
     }
 
     void main() {
@@ -198,13 +283,26 @@
             fragmentColor = vec4(getSunColor(vLocalPos), 1.0);
         } else {
             vec3 albedo;
-            if (uTextureType == 1) {
-                albedo = getEarthColor(vLocalPos);
-            } else if (uTextureType == 2) {
-                albedo = getMoonColor(vLocalPos);
-            } else {
-                albedo = Material.Kd; 
+            // Selección de textura planetaria
+            if (uTextureType == 1) albedo = getEarthColor(vLocalPos);
+            else if (uTextureType == 2) albedo = getMoonColor(vLocalPos);
+            else if (uTextureType == 3) albedo = getMercuryColor(vLocalPos);
+            else if (uTextureType == 4) albedo = getVenusColor(vLocalPos);
+            else if (uTextureType == 5) albedo = getMarsColor(vLocalPos);
+            else if (uTextureType == 6) albedo = getJupiterColor(vLocalPos);
+            else if (uTextureType == 7) albedo = getSaturnColor(vLocalPos);
+            else if (uTextureType == 8) albedo = getUranusColor(vLocalPos);
+            else if (uTextureType == 9) albedo = getNeptuneColor(vLocalPos);
+            else if (uTextureType == 11) albedo = getRingColor(vLocalPos);
+            else if (uTextureType == 10) {
+                fragmentColor = vec4(getStarsColor(vLocalPos), 1.0);
+                return;
             }
+            else if (uTextureType == 12) {
+                fragmentColor = vec4(Material.Kd, 1.0);
+                return;
+            }
+            else albedo = Material.Kd; // Fallback
             
             vec3 N = normalize(vNormal);
             vec3 L = normalize(Light.Position - vPos);
@@ -213,26 +311,29 @@
             // Calcular factor de sombra
             float shadow = calculateShadow(vPos, Light.Position);
             
-            // Phong con sombra
-            vec3 ambient = Material.Ka * Light.La; // Ambiente siempre existe
+            vec3 ambient = Material.Ka * Light.La; 
             vec3 diffuse = vec3(0.0);
             vec3 specular = vec3(0.0);
             
             float dist = length(Light.Position - vPos);
-            float attenuation = 1.0 / (0.1 + 0.01 * dist + 0.02 * dist * dist);
-            
-            // Solo aplicamos Diffuse/Specular si NO hay sombra
-            // O multiplicamos por shadow (0.0 o 1.0)
+            float attenuation = 1.0 / (1.0 + 0.01 * dist + 0.002 * dist * dist);
             
             float NdotL = max(0.0, dot(N, L));
             if (NdotL > 0.0) {
                 vec3 R = reflect(-L, N);
                 float RdotV = pow(max(0.0, dot(R, V)), Material.alpha);
-                diffuse = NdotL * (Light.Ld * albedo) * shadow; // Shadow here
-                specular = RdotV * (Light.Ls * Material.Ks) * shadow; // Shadow here
+                diffuse = NdotL * (Light.Ld * albedo) * shadow; 
+                specular = RdotV * (Light.Ls * Material.Ks) * shadow; 
             }
             
             vec3 finalColor = ambient + (diffuse + specular) * attenuation;
+            
+            // Tonemapping (Reinhard) para evitar que se quemen los colores cerca del sol
+            finalColor = finalColor / (finalColor + vec3(1.0));
+            
+            // Corrección Gamma básica
+            finalColor = pow(finalColor, vec3(1.0 / 2.2));
+            
             fragmentColor = vec4(finalColor, 1.0);
         }
     }
@@ -243,9 +344,12 @@
 
 
 
-    <canvas id="myCanvas" width="800" height="600">
-        Tu navegador no soporta HTML5
-    </canvas>
+    <div id="container">
+        <canvas id="myCanvas" width="800" height="600">
+            Tu navegador no soporta HTML5
+        </canvas>
+        <div id="labels"></div>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.4.0/gl-matrix.js"></script>
 
