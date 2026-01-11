@@ -42,7 +42,7 @@
             box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
         }
 
-        /* Estilos para las etiquetas de los planetas */
+        
         #labels {
             position: absolute;
             top: 0;
@@ -50,7 +50,7 @@
             width: 100%;
             height: 100%;
             pointer-events: none;
-            /* No interfiere con el ratón */
+            
             overflow: hidden;
             z-index: 10;
         }
@@ -82,14 +82,14 @@
     in vec3 VertexNormal;
 
     out vec3 vNormal;
-    out vec3 vPos;       // View Space Position (for lighting)
-    out vec3 vLocalPos;  // Object Space Position (for texturing)
+    out vec3 vPos;       
+    out vec3 vLocalPos;  
 
     void main() {
         vNormal = normalize(normalMatrix * VertexNormal);
         vec4 ecPosition = modelViewMatrix * vec4(VertexPosition, 1.0);
         vPos = vec3(ecPosition);
-        vLocalPos = VertexPosition; // Pass original position
+        vLocalPos = VertexPosition; 
         gl_Position = projectionMatrix * ecPosition;
     }
     </script>
@@ -109,7 +109,7 @@
     uniform bool uIsSun;
 
     struct LightData {
-        vec3 Position; // View Space Position of Light
+        vec3 Position; 
         vec3 La; vec3 Ld; vec3 Ls;
     };
     uniform LightData Light;
@@ -121,7 +121,7 @@
 
     
     vec3 calculatePhong(vec3 N, vec3 L, vec3 V, vec3 albedo) {
-        vec3 ambient = Material.Ka * Light.La; // Could use albedo for ambient too
+        vec3 ambient = Material.Ka * Light.La; 
         vec3 diffuse = vec3(0.0);
         vec3 specular = vec3(0.0);
         
@@ -132,15 +132,16 @@
         if (NdotL > 0.0) {
             vec3 R = reflect(-L, N);
             float RdotV = pow(max(0.0, dot(R, V)), Material.alpha);
-            diffuse = NdotL * (Light.Ld * albedo); // Use albedo here
+            diffuse = NdotL * (Light.Ld * albedo); 
             specular = RdotV * (Light.Ls * Material.Ks);
         }
         return ambient + (diffuse + specular) * attenuation;
     }
 
-    // --- Noise Functions ---
+    
     float hash(float n) { return fract(sin(n) * 43758.5453123); }
-    float simpleNoise(vec3 x) {
+    
+    float noise(vec3 x) {
         vec3 p = floor(x);
         vec3 f = fract(x);
         f = f * f * (3.0 - 2.0 * f);
@@ -150,93 +151,333 @@
                    mix(mix(hash(n + 113.0), hash(n + 114.0), f.x),
                        mix(hash(n + 170.0), hash(n + 171.0), f.x), f.y), f.z);
     }
+    
+    
+    float fbm(vec3 p) {
+        float f = 0.0;
+        float w = 0.5;
+        for (int i = 0; i < 5; i++) {
+            f += w * noise(p);
+            p = p * 2.02; 
+            w *= 0.5;
+        }
+        return f;
+    }
+    
+    
+    float simpleNoise(vec3 x) { return noise(x); }
 
     vec3 getSunColor(vec3 pos) {
-        vec3 c1 = vec3(1.0, 0.5, 0.0); 
-        vec3 c2 = vec3(1.0, 0.9, 0.1); 
-        float n = sin(pos.x * 20.0 + uTime) * sin(pos.y * 20.0 + uTime * 2.1) * sin(pos.z * 20.0 + uTime * 0.7);
-        n = n * 0.5 + 0.5;
-        float spot = smoothstep(0.7, 1.0, n);
-        vec3 finalColor = mix(c1, c2, n);
-        finalColor += vec3(1.0, 1.0, 0.8) * spot;
-        return finalColor;
+        
+        float t = uTime * 0.2;
+        
+        
+        vec3 p = pos * 3.0; 
+        float n = fbm(p + vec3(0.0, t, 0.0));
+        
+        
+        float n2 = fbm(pos * 6.0 - vec3(t, 0.0, t*0.5));
+        
+        
+        float heat = n * 0.5 + n2 * 0.5;
+        
+        
+        
+        vec3 colorDark = vec3(0.7, 0.1, 0.0);   
+        vec3 colorBase = vec3(1.0, 0.5, 0.0);   
+        vec3 colorBright = vec3(1.0, 0.9, 0.2); 
+        vec3 colorHot = vec3(1.0, 1.0, 0.9);    
+        
+        vec3 finalColor = mix(colorDark, colorBase, smoothstep(0.2, 0.5, heat));
+        finalColor = mix(finalColor, colorBright, smoothstep(0.5, 0.8, heat));
+        finalColor = mix(finalColor, colorHot, smoothstep(0.8, 1.0, heat));
+        
+        
+        
+        
+        
+        
+        return finalColor * 1.5; 
     }
 
     vec3 getEarthColor(vec3 pos) {
-        // Noise for continents
-        float n = simpleNoise(pos * 2.0); // Scale 2.0
         
-        // Threshold for water/land
-        // Ocean (Blue) vs Land (Green/Brown)
-        vec3 ocean = vec3(0.0, 0.2, 0.8);
-        vec3 land = vec3(0.1, 0.6, 0.2); // Green
-        vec3 mountain = vec3(0.4, 0.3, 0.2); // Brown
+        float n = fbm(pos * 2.0); 
+
+        
+        float lat = abs(pos.y); 
+
         
         if (n < 0.5) {
-            return ocean;
-        } else if (n < 0.7) {
-            return land;
-        } else {
-            return mountain;
+            
+            
+            float depth = n / 0.5; 
+            
+            
+            
+            vec3 q = pos * 15.0 + vec3(uTime * 0.2, 0.0, uTime * 0.1);
+            float w = fbm(q);
+            float w2 = fbm(pos * 30.0 - vec3(uTime * 0.3, 0.0, uTime * 0.3)); 
+            
+            float waveMix = w * 0.6 + w2 * 0.4;
+            
+            
+            vec3 colDeep = vec3(0.01, 0.03, 0.20); 
+            vec3 colMid  = vec3(0.02, 0.15, 0.45);
+            vec3 colShore = vec3(0.0, 0.5, 0.6);
+            
+            
+            vec3 water = mix(colDeep, colMid, smoothstep(0.4, 0.8, depth));
+            water = mix(water, colShore, smoothstep(0.8, 1.0, depth));
+            
+            
+            
+            float foamMask = smoothstep(0.65, 0.8, waveMix);            
+            float shoreFoam = smoothstep(0.9, 1.0, depth) * 0.5; 
+            
+            vec3 foamColor = vec3(0.9);
+            water += foamColor * (foamMask * 0.3 + shoreFoam);
+            
+            
+            water += vec3(0.05) * waveMix;
+            
+            return water;
         }
+
+        
+        
+        float h = (n - 0.5) * 2.0;
+        
+        
+        float biomeNoise = fbm(pos * 4.0);
+        float fineGrain = fbm(pos * 60.0); 
+        
+        vec3 col;
+        
+        
+        vec3 sand = vec3(0.85, 0.78, 0.60);
+        vec3 forestDark = vec3(0.02, 0.18, 0.04); 
+        vec3 forestBright = vec3(0.05, 0.35, 0.05); 
+        vec3 grass = vec3(0.25, 0.45, 0.15); 
+        vec3 rock = vec3(0.35, 0.32, 0.30);
+        vec3 snow = vec3(0.98, 0.98, 1.0);
+        
+        if (lat > 0.85) {
+            
+            col = snow;
+             
+            float ice = smoothstep(0.4, 0.6, fineGrain);
+            col = mix(col, vec3(0.85, 0.9, 1.0), ice);
+        } else {
+            
+            if (h < 0.04) {
+                 col = sand;
+            } else {
+                 
+                 
+                 float moisture = (1.0 - lat) * 0.6 + biomeNoise * 0.4;
+                 
+                 vec3 biome;
+                 
+                 if (h > 0.7) {
+                     
+                     biome = mix(rock, snow, smoothstep(0.7, 0.9, h));
+                 } else {
+                     
+                     if (moisture > 0.6) {
+                         
+                         biome = mix(forestDark, forestBright, fineGrain);
+                     } else if (moisture > 0.3) {
+                         
+                         vec3 base = grass;
+                         
+                         if (fineGrain > 0.6) base = forestDark;
+                         biome = base;
+                     } else {
+                         
+                         biome = mix(vec3(0.5, 0.4, 0.2), grass, fineGrain);
+                     }
+                 }
+                 
+                 col = biome;
+                 
+                 
+                 
+                 col *= (0.8 + 0.4 * smoothstep(0.2, 0.8, fineGrain));
+            }
+        }
+        
+        return col;
     }
 
     vec3 getMoonColor(vec3 pos) {
-        float n = simpleNoise(pos * 5.0); // More frequent noise for craters
-        float craters = smoothstep(0.4, 0.6, n);
-        vec3 baseDate = vec3(0.5, 0.5, 0.5); // Grey
-        vec3 dark = vec3(0.3, 0.3, 0.3);
-        return mix(baseDate, dark, craters);
+        
+        float n = fbm(pos * 2.5);
+        
+        
+        float detail = fbm(pos * 12.0);
+        
+        
+        float c = noise(pos * 8.0);
+        c = abs(c - 0.5) * 2.0; 
+        c = smoothstep(0.2, 0.8, c); 
+
+        vec3 darkMare = vec3(0.25, 0.25, 0.28); 
+        vec3 lightHigh = vec3(0.7, 0.7, 0.72);  
+        
+        vec3 base = mix(darkMare, lightHigh, smoothstep(0.4, 0.55, n));
+        
+        
+        base *= (0.8 + 0.4 * detail); 
+        base *= (0.5 + 0.5 * c);      
+        
+        return base;
     }
     
     vec3 getMercuryColor(vec3 pos) {
-        return getMoonColor(pos) * 1.2; // Similar a la luna pero más brillante/diferente tono
+        
+        vec3 moon = getMoonColor(pos);
+        return moon * vec3(0.9, 0.8, 0.7) * 1.1; 
     }
 
     vec3 getVenusColor(vec3 pos) {
-        float n = simpleNoise(pos * 3.0);
-        vec3 c1 = vec3(1.0, 0.9, 0.6); // Amarillo pálido
-        vec3 c2 = vec3(0.9, 0.6, 0.2); // Naranja
-        return mix(c1, c2, n);
+        
+        
+        float n = fbm(pos * 4.0 + vec3(uTime * 0.1, 0.0, 0.0)); 
+        
+        vec3 cream = vec3(1.0, 0.95, 0.8);
+        vec3 orange = vec3(0.8, 0.5, 0.2);
+        
+        return mix(orange, cream, n);
     }
 
     vec3 getMarsColor(vec3 pos) {
-        float n = simpleNoise(pos * 4.0);
-        vec3 c1 = vec3(0.8, 0.3, 0.1); // Rojo óxido
-        vec3 c2 = vec3(0.6, 0.2, 0.1); // Rojo oscuro
-        return mix(c1, c2, smoothstep(0.3, 0.7, n));
+        
+        float ice = smoothstep(0.8, 0.95, abs(pos.y));
+        
+        
+        float n = fbm(pos * 3.5);
+        float rock = smoothstep(0.3, 0.6, n);
+        
+        
+        vec3 rust = vec3(0.8, 0.35, 0.15);  
+        vec3 darkRock = vec3(0.35, 0.15, 0.1); 
+        vec3 iceColor = vec3(0.95, 0.95, 0.98);
+        
+        vec3 surface = mix(rust, darkRock, rock);
+        
+        
+        
+        
+        return mix(surface, iceColor, ice);
     }
 
     vec3 getJupiterColor(vec3 pos) {
-        // Bandas horizontales basadas en Y
-        float bands = sin(pos.y * 10.0 + simpleNoise(pos*3.0)*2.0); 
-        vec3 c1 = vec3(0.9, 0.8, 0.7); // Crema
-        vec3 c2 = vec3(0.8, 0.5, 0.4); // Marrón rojizo
-        return mix(c1, c2, bands * 0.5 + 0.5);
+        
+        
+        float turb = fbm(pos * 6.0 + vec3(uTime * 0.2, 0.0, 0.0));
+        float y = pos.y * 6.0 + turb * 0.5;
+        
+        float bands = sin(y);
+        
+        
+        
+        
+        
+        float spotDist = length(pos.xy - vec2(0.4, -0.2)); 
+        float spot = smoothstep(0.4, 0.25, spotDist);
+        
+        
+        vec3 zone = vec3(0.95, 0.9, 0.8); 
+        vec3 belt = vec3(0.6, 0.35, 0.2); 
+        vec3 redSpotColor = vec3(0.7, 0.2, 0.1);
+        
+        vec3 col = mix(belt, zone, bands * 0.5 + 0.5);
+        
+        
+        if (spot > 0.0) {
+            
+            float spotTurb = fbm(pos * 10.0 + uTime * 0.5);
+            col = mix(col, redSpotColor * (0.8 + 0.2*spotTurb), spot);
+        }
+        
+        return col;
     }
     
     vec3 getSaturnColor(vec3 pos) {
-        float bands = sin(pos.y * 8.0);
-        vec3 c1 = vec3(0.9, 0.85, 0.6); // Dorado pálido
-        vec3 c2 = vec3(0.8, 0.7, 0.5); // Beige
-        return mix(c1, c2, bands * 0.5 + 0.5);
+        
+        float turb = fbm(pos * 8.0) * 0.1; 
+        float bands = sin(pos.y * 12.0 + turb);
+        
+        vec3 gold = vec3(0.85, 0.75, 0.5);
+        vec3 beige = vec3(0.75, 0.65, 0.45);
+        vec3 greyish = vec3(0.6, 0.6, 0.5); 
+        
+        vec3 col = mix(beige, gold, bands * 0.5 + 0.5);
+        
+        
+        if (abs(pos.y) > 0.9) {
+            col = mix(col, greyish, 0.5);
+        }
+        
+        return col;
     }
 
     vec3 getUranusColor(vec3 pos) {
-        return vec3(0.6, 0.8, 0.9) * (0.9 + 0.1 * simpleNoise(pos * 5.0)); // Featureless Cyan
+        
+        
+        float band = smoothstep(-1.0, 1.0, sin(pos.y * 10.0));
+        
+        vec3 cyan = vec3(0.55, 0.8, 0.85);
+        vec3 pale = vec3(0.65, 0.85, 0.9);
+        
+        
+        return mix(cyan, pale, band * 0.3);
     }
 
     vec3 getNeptuneColor(vec3 pos) {
-        return vec3(0.2, 0.3, 0.8) * (0.8 + 0.2 * simpleNoise(pos * 5.0)); // Deep Blue
+        
+        float turb = fbm(pos * 5.0 + vec3(uTime*1.5, 0.0, 0.0)); 
+        
+        vec3 brightBlue = vec3(0.2, 0.3, 0.9);
+        vec3 deepBlue = vec3(0.1, 0.15, 0.6);
+        vec3 whiteCloud = vec3(0.9, 0.95, 1.0);
+        
+        
+        vec3 col = mix(deepBlue, brightBlue, 0.5 + 0.5 * sin(pos.y * 4.0 + turb));
+        
+        
+        float streak = smoothstep(0.6, 0.8, fbm(pos * vec3(2.0, 20.0, 2.0) + vec3(uTime*4.0, 0.0, 0.0)));
+        col = mix(col, whiteCloud, streak * 0.6);
+        
+        return col;
     }
 
     vec3 getRingColor(vec3 pos) {
-        // Franjas de polvo/hielo basadas en la distancia radial
+        
         float r = length(pos.xz);
-        float bands = sin(r * 80.0) * 0.5 + 0.5;
-        vec3 c1 = vec3(0.7, 0.6, 0.4);
-        vec3 c2 = vec3(0.4, 0.3, 0.2);
-        return mix(c1, c2, bands);
+        
+        
+        float grooves = sin(r * 200.0);
+        
+        
+        
+        float cassini = smoothstep(0.02, 0.03, abs(r - 1.8)); 
+        
+        
+        vec3 inner = vec3(0.6, 0.5, 0.4);
+        vec3 outer = vec3(0.55, 0.5, 0.4);
+        
+        vec3 dust = mix(inner, outer, r - 1.3);
+        
+        
+        dust *= (0.8 + 0.2 * grooves);
+        
+        
+        
+        if (cassini < 0.1) return vec3(0.05); 
+        
+        return dust;
     }
 
     vec3 getStarsColor(vec3 pos) {
@@ -246,12 +487,12 @@
     }
 
     uniform int uTextureType; 
-    // 0=Solid, 1=Earth, 2=Moon, 3=Mercury, 4=Venus, 5=Mars, 6=Jupiter, 7=Saturn, 8=Uranus, 9=Neptune, 10=Stars, 11=Rings
+    
 
     uniform vec3 uBlockerPos;
     uniform float uBlockerRadius;
 
-    // 0.0 = Sombra total, 1.0 = Luz total
+    
     float calculateShadow(vec3 fragPos, vec3 lightPos) {
         if (uBlockerRadius <= 0.0) return 1.0; 
 
@@ -283,7 +524,7 @@
             fragmentColor = vec4(getSunColor(vLocalPos), 1.0);
         } else {
             vec3 albedo;
-            // Selección de textura planetaria
+            
             if (uTextureType == 1) albedo = getEarthColor(vLocalPos);
             else if (uTextureType == 2) albedo = getMoonColor(vLocalPos);
             else if (uTextureType == 3) albedo = getMercuryColor(vLocalPos);
@@ -302,13 +543,13 @@
                 fragmentColor = vec4(Material.Kd, 1.0);
                 return;
             }
-            else albedo = Material.Kd; // Fallback
+            else albedo = Material.Kd; 
             
             vec3 N = normalize(vNormal);
             vec3 L = normalize(Light.Position - vPos);
             vec3 V = normalize(-vPos);
             
-            // Calcular factor de sombra
+            
             float shadow = calculateShadow(vPos, Light.Position);
             
             vec3 ambient = Material.Ka * Light.La; 
@@ -328,10 +569,10 @@
             
             vec3 finalColor = ambient + (diffuse + specular) * attenuation;
             
-            // Tonemapping (Reinhard) para evitar que se quemen los colores cerca del sol
+            
             finalColor = finalColor / (finalColor + vec3(1.0));
             
-            // Corrección Gamma básica
+            
             finalColor = pow(finalColor, vec3(1.0 / 2.2));
             
             fragmentColor = vec4(finalColor, 1.0);
