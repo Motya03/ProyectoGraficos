@@ -1,5 +1,5 @@
 # Graficos WebGL
-ProyectoSistemaSolarGraficos
+Proyecto Sistema Solar de la Asignatura Graficos por Computador.
 
 ## Nombres de los integrantes y de sus Usuarios GitHub
 Matvei Shestakov -- Motya03
@@ -7,13 +7,13 @@ Matvei Shestakov -- Motya03
 
 ## Objetivo del proyecto
 
-Este proyecto consiste en una simulacion interactiva del Sistema Solar implementada desde cero utilizando WebGL2 y JavaScript. El objetivo principal es lograr representaciones visuales realistas y detalladas de los planetas y otros objetos celestes. El proyecto permite navegar libremente por el sistema solar y observar los planetas orbitando y rotando, con superficies generadas proseduralmente.
+Este proyecto consiste en una simulacion interactiva del Sistema Solar implementada desde cero utilizando WebGL2 y JavaScript. El objetivo principal es lograr representaciones visuales realistas y detalladas de los planetas y otros objetos celestes. Se puede navegar libremente por el sistema solar y observar los planetas orbitando y rotando, con superficies generadas proceduralmente.
 
 ## Plan de Sprints
 
 | 1 | Creacion de la idea del proyecto.
 | 2 | Implamentacion de los objetos y Programacion de ls movimientos.
-| 3 | Pulido de detalles, boton pausa etc.
+| 3 | Pulido de detalles, boton pausa, etc.
 
 
 ## Bitacora de trabajo 
@@ -21,9 +21,9 @@ Este proyecto consiste en una simulacion interactiva del Sistema Solar implement
 | Fecha | Trabajo realizado | Problemas / Decisiones |
 |--------|----------------------|-------------------------------|
 | 29/12/2025 | Creacion de la idea del proyecto y creados el repositorio con el ReadME |  |
-| 30/12/2025 | Sol con su emision de luz y movimiento de camara con WASD | No seveian ls planetas al principio  |
-| 02/01/2026 | Modelo de Tierra que gira alrededor del sol y sobre su eje, Luna que gira alrededor de Tierra y de su eje. Y como le afecta la luz solar| La luna recibia luz aun estando detras del sol en ralacion al sol  |
-| 05/01/2026 | Los demas planetas, con tamanos , velocidades ajustados a la vida real. Luz ajustada. | Dificultados a la hora de representar bien los tamanos y movimientos de los ejes y tal |
+| 30/12/2025 | Sol con su emision de luz y movimiento de camara con WASD |  |
+| 02/01/2026 | Modelo de Tierra que gira alrededor del sol y sobre su eje, Luna que gira alrededor de Tierra y de su eje. Y como le afecta la luz solar| La luna recibia luz aun estando detras de la Terra en ralacion al sol |
+| 05/01/2026 | Los demas planetas, con tamanos , velocidades ajustados a la vida real. Luz ajustada. | Dificultados a la hora de representar bien los tamanos y movimientos de las orbitas  |
 | 11/01/2026 | Detalles pulidos como asteroides, el boton de pausa y la orbita  visible |  |
 
 ## Resultados Finales
@@ -47,16 +47,16 @@ Este proyecto consiste en una simulacion interactiva del Sistema Solar implement
 
 ### Curiosidades y Detalles Tecnicos
 
-1.  **Texturizado 100% Procedural**:
-   * Una de las caracteristicas mas destacadas es que **no se carga ninguna imagen** para las texturas. Cada planeta se "pinta" matematicamente en el *Fragment Shader*:
+1.  **Texturizado  Procedural**:
+   * No se carga ninguna imagen para las texturas. Cada planeta se pinta matematicamente en el Fragment Shader.
 
 2.  **Sistema de Iluminacion**:
-    *   Implementacion del modelo de iluminacion **Phong** (Ambient + Diffuse + Specular).
+    *   Implementacion del modelo de iluminacion Phong (Ambient + Diffuse + Specular).
     *   Calculo de atenuacion de la luz basado en la distancia al Sol.
-    *   **Sombras (Blockers)**: El sistema calcula intersecciones esfera-rayo en el shader para permitir que los cuerpos celestes proyecten sombras (eclipses) simples.
+    *   El sistema calcula intersecciones esfera-rayo en el shader para permitir que los cuerpos celestes proyecten sombras (eclipses) simples.
 
 3.  **Camara y Control**:
-    *   Se implemento una camara de vuelo libre  controlada con el teclado (WASD) y el raton para permitir la exploracion detallada de cada planeta.
+    *   Se implemento una camara de vuelo libre  controlada con el teclado (WASD) y el raton.
 4.  **Pausa y Orbita**:
     *   Con el espacio se pausa el sistema , y con el R aparecen los nombres y la orbita. 
 
