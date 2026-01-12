@@ -38,6 +38,9 @@ Este proyecto consiste en una simulacion interactiva del Sistema Solar implement
 [![Novyj-risunok-(2).png](https://i.postimg.cc/28pPb4zz/Novyj-risunok-(2).png)](https://postimg.cc/jCX8Bnw9)
  El Sol utiliza un shader animado con el tiempo para simular el plasma en su superficie.
 
+[![Novyj-risunok-(3).png](https://i.postimg.cc/6344Ss2c/Novyj-risunok-(3).png)](https://postimg.cc/phxdh6B5)
+ Todo el sistema solar con sus orbitas.
+
  ## Herramientas y Tecnologias
 *   **HTML5 & CSS3**: Estructura base y estilizacion del canvas y la interfaz.
 *   **JavaScript (ES6+)**: Logica de la aplicacion, bucle de renderizado, manejo de eventos y control de camara.
